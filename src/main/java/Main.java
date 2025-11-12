@@ -8,6 +8,11 @@ public class Main {
         // App expects an env variable: SLACK_BOT_TOKEN
         var app = new App();
         Listeners.register(app);
+
+        app.command("/hello", (req, ctx) -> {
+            return ctx.ack(":wave: Hello!");
+          });
+
         // SocketModeApp expects an env variable: SLACK_APP_TOKEN
         new SocketModeApp(app).start();
     }
