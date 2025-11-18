@@ -1,19 +1,75 @@
 import com.slack.api.bolt.App;
+import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.socket_mode.SocketModeApp;
-import listeners.Listeners;
+import com.slack.api.model.Message;
+import com.slack.api.methods.SlackApiException;
+import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
+import java.io.IOException;
+import java.util.List;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        // App expects an env variable: SLACK_BOT_TOKEN
         var app = new App();
-        Listeners.register(app);
 
-        app.command("/hello", (req, ctx) -> {
-            return ctx.ack(":wave: Hello!");
-          });
+        app.command("/quotecount", (req, ctx) -> {
+            String userText = req.getPayload().getText();
+            String channelId = req.getPayload().getChannelId();
 
-        // SocketModeApp expects an env variable: SLACK_APP_TOKEN
+            // Extract the user ID from the userText (assumes user mentions are in the format @username)
+            String userId = extractUserId(userText);
+            if (userId == null) {
+                return ctx.ack("Invalid user mentioned! Please use the format @username.");
+            }
+
+            // Count mentions in the channel
+            int mentionCount = countUserMentionsInChannel(channelId, userId, ctx);
+
+            // Respond with the result
+            return ctx.ack("User <@" + userId + "> has been quoted " + mentionCount + " times in this channel.");
+        });
+
         new SocketModeApp(app).start();
     }
+
+    private static String extractUserId(String text) {
+        if (text.startsWith("<@") && text.endsWith(">")) {
+            return text.substring(2, text.length() - 1);
+        }
+        return null;
+    }
+
+    private static int countUserMentionsInChannel(String channelId, String userId, SlashCommandContext ctx)
+        throws IOException, SlackApiException {
+
+    var client = ctx.client();
+    var token = ctx.getBotToken();
+
+    ConversationsHistoryResponse historyResponse = client.conversationsHistory(r -> r
+            .token(token)
+            .channel(channelId)
+    );
+
+    if (!historyResponse.isOk()) {
+        System.out.println("Slack API error: " + historyResponse.getError());
+        return 0;  // or throw
+    }
+
+    List<Message> messages = historyResponse.getMessages();
+    if (messages == null) {
+        System.out.println("Messages list is null — Slack returned no data.");
+        return 0;
+    }
+
+    int count = 0;
+    for (Message message : messages) {
+        System.out.println(message.getText());
+        if (message.getText() != null && message.getText().contains("<@" + userId + ">")) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 }
