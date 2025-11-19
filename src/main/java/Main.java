@@ -16,16 +16,13 @@ public class Main {
             String userText = req.getPayload().getText();
             String channelId = req.getPayload().getChannelId();
 
-            // Extract the user ID from the userText (assumes user mentions are in the format @username)
             String userId = extractUserId(userText);
             if (userId == null) {
                 return ctx.ack("Invalid user mentioned! Please use the format @username.");
             }
 
-            // Count mentions in the channel
             int mentionCount = countUserMentionsInChannel(channelId, userId, ctx);
 
-            // Respond with the result
             return ctx.ack("User <@" + userId + "> has been quoted " + mentionCount + " times in this channel.");
         });
 
@@ -34,7 +31,7 @@ public class Main {
 
     private static String extractUserId(String text) {
         if (text.startsWith("<@") && text.endsWith(">")) {
-            return text.substring(2, text.length() - 1);
+            return text.substring(2, text.indexOf("|"));
         }
         return null;
     }
@@ -52,7 +49,7 @@ public class Main {
 
     if (!historyResponse.isOk()) {
         System.out.println("Slack API error: " + historyResponse.getError());
-        return 0;  // or throw
+        return 0;
     }
 
     List<Message> messages = historyResponse.getMessages();
@@ -68,7 +65,6 @@ public class Main {
             count++;
         }
     }
-
     return count;
 }
 
