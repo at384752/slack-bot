@@ -12,6 +12,10 @@ public class Main {
     public static void main(String[] args) throws Exception {
         var app = new App();
 
+        app.command("/hello", (req, ctx) -> {
+            return ctx.ack(":wave: Hello!");
+        });
+
         app.command("/quotecount", (req, ctx) -> {
             String userText = req.getPayload().getText();
             String channelId = req.getPayload().getChannelId();
